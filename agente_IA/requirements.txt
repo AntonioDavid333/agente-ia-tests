@@ -1,0 +1,7 @@
+dotenv #importa las variables de entorno
+langchain #trabajar con LLM
+langchain-google-genai
+langchain_huggingface
+transformers
+torch
+
