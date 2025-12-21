@@ -3,5 +3,7 @@ langchain #trabajar con LLM
 langchain-google-genai
 langchain_huggingface
 transformers
+smolagents #Agentes de Huggingface
+accelerate #Para trabajar con GPU
 torch
 

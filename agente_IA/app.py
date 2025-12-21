@@ -1,39 +1,41 @@
+
+from smolagents import ToolCallingAgent, tool, DuckDuckGoSearchTool
 from dotenv import load_dotenv
-import os
-from os import getenv
-from langchain_google_genai import GoogleGenerativeAI
-from langchain.agents import create_agent
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-from langchain_huggingface.llms import HuggingFacePipeline
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-import torch
+from smolagents.models import OpenAIServerModel
+
 load_dotenv()
+#HERRAMIENTA DE PRUEBA
+@tool
+def send_message_to(destinatario: str, mensaje: str) -> str:
+    """
+    Útil para enviar un mensaje de correo electrónico a un destinatario.
+    
+    Args:
+        destinatario: La persona que recibe el email.
+        mensaje: El contenido del correo.
+    """ 
+    print(f"\n[ACCION] Enviando email a {destinatario}...")
+    return f"¡Éxito! El mensaje '{mensaje}' ha sido enviado a {destinatario}."
 
-hf_token = os.getenv("HF_TOKEN")
-#device = 0 if torch.cuda.is_available() else -1
-#print("Usando:", "GPU" if device == 0 else "CPU")
+#MODELO DE PRUEBA ANTES DE USAR OLLAMA
+model_id = "meta-llama/Llama-3.1-8B-Instruct"
 
-model_id = "meta-llama/Llama-3.2-3B-Instruct"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    dtype=torch.bfloat16,    # usar bf16
-    device_map="auto",             # usar GPU si existe
+llm=OpenAIServerModel(
+    model_id="mistral",
+    api_base="http://localhost:11434/v1",
+    api_key="ollama",
+    temperature=0,
+    response_format={"type":"json.Object"}
 )
-pipe = pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    max_new_tokens=128,
-    do_sample=False,
+
+agente = ToolCallingAgent(
+    model=llm,
+    tools=[send_message_to, DuckDuckGoSearchTool()],
+    max_steps=4
 )
-hf = HuggingFacePipeline(pipeline=pipe)
 
-""" hf = HuggingFacePipeline.from_model_id(
-    model_id="meta-llama/Llama-3.2-3B-Instruct",
-    task="text-generation",
-    pipeline_kwargs={"max_new_tokens": 10},
-) """
 
-chat_model = ChatHuggingFace(llm=hf)
-print(chat_model.invoke("hola mi niño"))
+print("\n--- Iniciando Agente ---")
+response = agente.run("DIME EL TIEMPO EN Andujar mañana a las 7:00")
+print("\n--- Respuesta Final ---")
+print(response)
