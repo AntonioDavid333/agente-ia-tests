@@ -65,7 +65,7 @@ def crawl_site(base_url, max_pages=200):
                 continue
 
             try:
-                print(f"Crawling {url}")
+                print(f"Navegando en: {url}")
                 page.goto(url, timeout=15000)
                 page.wait_for_load_state("domcontentloaded")
 
