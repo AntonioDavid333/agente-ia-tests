@@ -2,8 +2,13 @@ dotenv #importa las variables de entorno
 langchain #trabajar con LLM
 langchain-google-genai
 langchain_huggingface
+langchain_community
 transformers
 smolagents #Agentes de Huggingface
 accelerate #Para trabajar con GPU
 torch
+playwright
+beautifulsoup4
+html2text
+rapidfuzz #busquedas difusas
 
