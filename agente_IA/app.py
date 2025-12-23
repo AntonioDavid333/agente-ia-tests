@@ -209,9 +209,23 @@ agente = ToolCallingAgent(
    
 )
 
-
 print("\n--- Iniciando Agente ---")
-#response = agente.run(prompt1)
-response = agente.run("¿que grados superiores  hay?")
-print("\n--- Respuesta Final ---")
-print(response)
+
+# Expresiones que hacen salir del programa
+exit_commands = {"salir", "exit", "quit", "adios", "adiós", "bye", "chao", "hasta luego"}
+
+while True:
+    request = input("tú: ").strip().lower()
+
+    if request in exit_commands:
+        print("\nIES Jándula: ¡Ha sido un placer ayudarte! Si necesitas más asistencia, aquí estaré.")
+        break
+
+    if not request:
+        continue
+
+    response = agente.run(request)
+
+    print("\n--- Respuesta Final ---")
+    print("\nIES Jándula:",response)
+    print()
