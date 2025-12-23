@@ -98,7 +98,7 @@ def crawl_site(base_url, max_pages=200):
     return index
 
 
-def search(query, index, threshold=60):
+def search(query, index, threshold=30):
     query = query.lower()
     results = []
 
@@ -187,7 +187,7 @@ prompt_templates = PromptTemplates(
         Eres un experto en el IES Jándula.
         Tu objetivo es responder preguntas sobre módulos, ciclos, contactos, asignaturas y FP.
         Usa las herramientas disponibles para buscar información en la web oficial.
-        Una vez eencontrado el primer resultado útil, deja de iterar pasos y devuelve el resultado
+        Cuando el contenido incluya varios ciclos, debes enumerarlos TODOS en lugar de seleccionar uno.
         Responde siempre en español de manera clara y concisa.
         No inventes información.
         Tu formato de respuesta debe ser:
@@ -209,8 +209,9 @@ agente = ToolCallingAgent(
    
 )
 
+
 print("\n--- Iniciando Agente ---")
 #response = agente.run(prompt1)
-response = agente.run("¿que oferta de modulos hay además de desarrollo de aplicaciones web?")
+response = agente.run("¿que grados superiores  hay?")
 print("\n--- Respuesta Final ---")
 print(response)
