@@ -1,4 +1,7 @@
 
+import os
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 from smolagents import ToolCallingAgent, tool, DuckDuckGoSearchTool,ApiWebSearchTool
 from dotenv import load_dotenv
 from smolagents.models import OpenAIServerModel
@@ -115,6 +118,8 @@ def search(query, index, threshold=30):
 @tool
 def tool_buscar_en_web(query: str) -> str:
     """
+    Útil para obtener información sobre oferta educativa de módulos, FP, grado medio, grado superior,
+    información sobre cada módulo, asignaturas, contactos,etc.
     Busca la página más relevante dentro de https://fp.iesjandula.es/
     usando rastreo + búsqueda difusa.
     Devuelve SOLO la mejor URL.
@@ -139,15 +144,47 @@ def tool_buscar_en_web(query: str) -> str:
     return f"URL encontrada: {best_url}\nContenido relevante: {snippet}"
 
 #___________________________________________________________________________________________________________________
+#TOOL PARA CONSULTAR LA GUÍA DEL PROFESORADO
 
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+persist_db_path = os.path.join(os.getcwd(), "data", "chroma_db")
 
+vector_store = Chroma(
+    collection_name="guia_profesorado",
+    embedding_function=embeddings,
+    persist_directory=persist_db_path
+)
 
+@tool
+def guia_profesorado(search:str)->str:
+    """Consulta la guía oficial del profesorado del IES Jándula para el curso 2025/26.
+    
+    Úsala SIEMPRE que el usuario tenga dudas sobre:
+    - Organización del Centro: Datos de contacto, plano de las instalaciones, cargos directivos y jefaturas de departamento.
+    - Horarios y Calendario: Jornada laboral (horas lectivas y no lectivas), calendario escolar, fechas de evaluaciones, claustros y reuniones de departamento.
+    - Gestión de Ausencias y Bajas: Protocolo para notificar faltas vía Séneca, licencias por enfermedad (Anexo I) y cambios de clase.
+    - Normativa y Funciones: Obligaciones del profesor de guardia (patio, pasillos, aula de convivencia), atención a familias y protocolos de accidentes del alumnado.
+    - Actividades y Programación: Normas para actividades extraescolares, viajes de alumnos, uso de la biblioteca, reserva de aulas específicas y contenidos de las programaciones (ESO, Bachillerato, FP).
+    - Planes Educativos: Información sobre proyectos como Erasmus+, Bilingüismo, Escuela Espacio de Paz, Proyectos Internacionales, etc.
+    
+    Args:
+        search (str): Término de búsqueda, pregunta o consulta específica sobre la normativa u organización del centro.
+        
+    Returns:
+        str: Información relevante extraída directamente de la guía oficial.
+    """
+    #los K son los fragmentos
+    docs = vector_store.similarity_search(search, k=10)
+    texto_sucio = "\n\n".join([doc.page_content for doc in docs])
+    texto_limpio = " ".join(texto_sucio.split())
+    return texto_limpio
+#_____________________________________________________________________________________________________________________
 
 #MODELO DE PRUEBA ANTES DE USAR OLLAMA
 model_id = "meta-llama/Llama-3.1-8B-Instruct"
 
 llm=OpenAIServerModel(
-    model_id="mistral",
+    model_id="gpt-oss:20b-cloud",
     api_base="http://localhost:11434/v1",
     api_key="ollama",
     temperature=0,
@@ -186,7 +223,9 @@ prompt_templates = PromptTemplates(
     system_prompt=""""
         Eres un experto en el IES Jándula.
         Tu objetivo es responder preguntas sobre módulos, ciclos, contactos, asignaturas y FP.
-        Usa las herramientas disponibles para buscar información en la web oficial.
+        Usa las herramientas disponibles para buscar información.
+        Si el usuario pregunta por horarios, normativa, profesores o jornada laboral, DEBES usar primero 'guia_profesorado'.
+        Solo si la información no aparece ahí, utiliza 'tool_buscar_en_web' para consultar la web de FP.
         Cuando el contenido incluya varios ciclos, debes enumerarlos TODOS en lugar de seleccionar uno.
         Responde siempre en español de manera clara y concisa.
         No inventes información.
@@ -195,6 +234,14 @@ prompt_templates = PromptTemplates(
             "name": "nombre_de_la_herramienta",
             "arguments": {"arg_name": "valor"}
             }
+        SOLO puedes responder de dos formas:
+        1. Llamando a una herramienta con un ÚNICO bloque JSON.
+        2. Dando la respuesta final prefijada con 'Final Answer:'.
+
+        Formato estricto de herramienta:
+        {"name": "nombre_de_la_herramienta", "arguments": {"arg_name": "valor"}}
+
+        No añadas texto antes ni después del JSON. No llames a varias herramientas a la vez.
         """,
     planning=planning_template,
     managed_agent=managed_template,
@@ -203,7 +250,7 @@ prompt_templates = PromptTemplates(
 
 agente = ToolCallingAgent(
     model=llm,
-    tools=[send_message_to, DuckDuckGoSearchTool(), tool_buscar_en_web],
+    tools=[tool_buscar_en_web, guia_profesorado],
     max_steps=5,
     prompt_templates=prompt_templates
    

@@ -3,12 +3,19 @@ langchain #trabajar con LLM
 langchain-google-genai
 langchain_huggingface
 langchain_community
-transformers
+transformers 
 smolagents #Agentes de Huggingface
 accelerate #Para trabajar con GPU
-torch
-playwright
-beautifulsoup4
-html2text
+torch 
+playwright #Para web scraping
+beautifulsoup4 #Para web scraping
+html2text #Para web scraping
 rapidfuzz #busquedas difusas
 
+smolagents[openai]
+ddgs
+
+#BASE DE DATOS Y RAG
+langchain_chroma
+pypdf
+sentence-transformers
