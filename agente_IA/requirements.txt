@@ -19,3 +19,7 @@ ddgs
 langchain_chroma
 pypdf
 sentence-transformers
+
+#API
+fastapi
+uvicorn

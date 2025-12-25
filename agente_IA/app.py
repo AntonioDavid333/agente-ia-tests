@@ -1,5 +1,6 @@
 
 import os
+from fastapi.concurrency import run_in_threadpool
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from smolagents import ToolCallingAgent, tool, DuckDuckGoSearchTool,ApiWebSearchTool
@@ -14,7 +15,15 @@ from urllib.parse import urlparse, urljoin, urldefrag
 import re
 from rapidfuzz import fuzz
 
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+class Pregunta(BaseModel):
+    pregunta: str
+
 load_dotenv()
+
+app = FastAPI()
 #HERRAMIENTA DE PRUEBA
 @tool
 def send_message_to(destinatario: str, mensaje: str) -> str:
@@ -261,7 +270,7 @@ print("\n--- Iniciando Agente ---")
 # Expresiones que hacen salir del programa
 exit_commands = {"salir", "exit", "quit", "adios", "adiós", "bye", "chao", "hasta luego"}
 
-while True:
+""" while True:
     request = input("tú: ").strip().lower()
 
     if request in exit_commands:
@@ -275,4 +284,18 @@ while True:
 
     print("\n--- Respuesta Final ---")
     print("\nIES Jándula:",response)
-    print()
+    print() """
+#_____________________________________________________________________________________________________________________
+
+@app.post("/consulta/")
+async def consulta_ies_jandula(data: Pregunta):
+    try:
+        print(f"Recibida pregunta: {data.pregunta}")
+        
+        #RUN IN THREADPOOL ES PARA EVITAR CONFLICTO CON SYNC PLAYWRIGHT
+        respuesta = await run_in_threadpool(agente.run, data.pregunta)
+        
+        return {"respuesta": respuesta}
+    except Exception as e:
+        print(f"Error detectado: {e}")
+        return {"error": str(e)}
