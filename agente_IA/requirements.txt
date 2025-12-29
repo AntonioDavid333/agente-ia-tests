@@ -23,3 +23,9 @@ sentence-transformers
 #API
 fastapi
 uvicorn
+
+#prueba ollama
+langchain_ollama
+langgraph
+gradio
+requests

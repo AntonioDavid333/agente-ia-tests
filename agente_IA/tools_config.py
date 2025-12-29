@@ -3,7 +3,8 @@ import re
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, urljoin, urldefrag
 from rapidfuzz import fuzz
-from smolagents import tool
+#from smolagents import tool
+from langchain_core.tools import tool
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -83,7 +84,7 @@ def tool_buscar_en_web(query: str) -> str:
     best_url, snippet = results[0]
     return f"URL encontrada: {best_url}\nContenido relevante: {snippet}"
 
-# Configuración Vector DB
+#Configuración Vector DB
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 persist_db_path = os.path.join(os.getcwd(), "data", "chroma_db")
 vector_store = Chroma(collection_name="guia_profesorado", embedding_function=embeddings, persist_directory=persist_db_path)
@@ -100,3 +101,8 @@ def guia_profesorado(search: str) -> str:
     """
     docs = vector_store.similarity_search(search, k=10)
     return " ".join(("\n\n".join([doc.page_content for doc in docs])).split())
+
+@tool
+def dar_respuesta_final(respuesta: str):
+    """Usa esta herramienta cuando tengas la información necesaria para responder al usuario y quieras finalizar la sesión."""
+    return respuesta
