@@ -30,7 +30,7 @@ async def inicializar_agente():
     playwright = await async_playwright().start()
     navegador_async = await playwright.chromium.launch(headless=True)
     page = await navegador_async.new_page()
-    await page.goto("https://iesjandula.es/", timeout=15000)
+    await page.goto("https://fp.iesjandula.es/", timeout=15000)
 
     conjunto_herramientas = PlayWrightBrowserToolkit(async_browser=navegador_async)
     herramientas_navegador = conjunto_herramientas.get_tools()
@@ -52,7 +52,10 @@ async def inicializar_agente():
     
     
     def chatbot(estado: Estado):
-        return {"messages": [llm_herramientas.invoke(estado["messages"])]}
+        try:
+            return {"messages": [llm_herramientas.invoke(estado["messages"])]}
+        except Exception as e:
+            return {"messages": ["No se pudo obtener la información"]}
 
     constructor_grafo = StateGraph(Estado)
     constructor_grafo.add_node("chatbot",chatbot)
