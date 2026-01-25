@@ -99,6 +99,7 @@ def guia_profesorado(search: str) -> str:
     Returns: 
         str: La información relevante encontrada en la guía.
     """
+    print("Buscando en la guia de profesorado:",search)
     docs = vector_store.similarity_search(search, k=10)
     return " ".join(("\n\n".join([doc.page_content for doc in docs])).split())
 

@@ -8,6 +8,8 @@ smolagents #Agentes de Huggingface
 accelerate #Para trabajar con GPU
 torch 
 playwright #Para web scraping
+#tavily-python
+langchain-tavily
 beautifulsoup4 #Para web scraping
 html2text #Para web scraping
 rapidfuzz #busquedas difusas
