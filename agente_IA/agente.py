@@ -40,7 +40,7 @@ async def inicializar_agente():
     playwright = await async_playwright().start()
     navegador_async = await playwright.chromium.launch(headless=True)
     page = await navegador_async.new_page()
-    await page.goto("https://fp.iesjandula.es/", timeout=15000)
+    await page.goto("https://blogsaverroes.juntadeandalucia.es/iesjandula/", timeout=15000)
 
     conjunto_herramientas = PlayWrightBrowserToolkit(async_browser=navegador_async)
     tool_busqueda_general = TavilySearch(
@@ -54,8 +54,8 @@ async def inicializar_agente():
         Respondes SIEMPRE en español mientras no te pidan que respondas en otro idioma.
 
         PRIORIDAD DE BÚSQUEDA:
-        1. Información Interna: Usa 'guia_profesorado' para datos técnicos de módulos y profesores.
-        2. Web Oficial: Para noticias, calendarios y eventos, navega en https://iesjandula.es/ usando Playwright.
+        1. Información Interna: Usa 'guia_profesorado' para datos sobre profesores, guía de actuación, orientación de profesorado... o navega en la
+            Web Oficial: Para noticias, contacto, calendarios y eventos, oferta de módulos, blogs, oferta educativa navega en https://blogsaverroes.juntadeandalucia.es/iesjandula/ usando Playwright.
         3. Internet (Tavily): Úsalo ÚNICAMENTE si el usuario pregunta algo general necesario para entender un concepto del centro, o si buscas una noticia externa que mencione específicamente al 'IES Jándula'.
 
         REGLA CRÍTICA: 
