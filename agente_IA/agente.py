@@ -11,12 +11,13 @@ from langgraph.graph.message import add_messages
 from typing import Annotated
 from typing_extensions import TypedDict
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import ToolNode, tools_condition 
+from langgraph.prebuilt import tools_condition 
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
 import requests
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_tavily import TavilySearch
+from langchain_core.messages import ToolMessage
 
 #_________________________________________________________________________________________________________________
 load_dotenv()
@@ -35,20 +36,55 @@ else:
 class Estado(TypedDict):
     messages: Annotated[list, add_messages]
 
-async def inicializar_agente():
-    from playwright.async_api import async_playwright
-    playwright = await async_playwright().start()
-    navegador_async = await playwright.chromium.launch(headless=True)
-    page = await navegador_async.new_page()
-    await page.goto("https://blogsaverroes.juntadeandalucia.es/iesjandula/", timeout=15000)
+def _ejecutar_herramientas_sincro(estado: Estado, herramientas: list):
+    """Ejecuta herramientas de forma sincrónica sin ThreadPoolExecutor."""
+    mensajes = estado["messages"]
+    ultimo_mensaje = mensajes[-1]
+    
+    # Si el último mensaje no contiene tool_calls, no hay nada que hacer
+    if not hasattr(ultimo_mensaje, 'tool_calls') or not ultimo_mensaje.tool_calls:
+        return {"messages": []}
+    
+    herramientas_por_nombre = {h.name: h for h in herramientas}
+    nuevos_mensajes = []
+    
+    # Ejecutar cada herramienta de forma sincrónica
+    for tool_call in ultimo_mensaje.tool_calls:
+        herramienta = herramientas_por_nombre.get(tool_call["name"])
+        if not herramienta:
+            resultado = f"Herramienta '{tool_call['name']}' no encontrada"
+        else:
+            try:
+                resultado = herramienta.invoke(tool_call["args"])
+            except Exception as e:
+                resultado = f"Error ejecutando {tool_call['name']}: {str(e)}"
+        
+        nuevos_mensajes.append(
+            ToolMessage(
+                content=str(resultado),
+                tool_call_id=tool_call["id"],
+                name=tool_call["name"]
+            )
+        )
+    
+    return {"messages": nuevos_mensajes}
 
-    conjunto_herramientas = PlayWrightBrowserToolkit(async_browser=navegador_async)
+def inicializar_agente():
+    """Inicializa el agente de forma sincrónica."""
+    from playwright.sync_api import sync_playwright
+    
+    # Usar navegador sincrónico (PlayWrightBrowserToolkit requiere sync, no async)
+    playwright = sync_playwright().start()
+    navegador = playwright.chromium.launch(headless=True)
+    page = navegador.new_page()
+    page.goto("https://blogsaverroes.juntadeandalucia.es/iesjandula/", timeout=15000)
+
+    conjunto_herramientas = PlayWrightBrowserToolkit(sync_browser=navegador)
     tool_busqueda_general = TavilySearch(
         max_results=3, 
         tavily_api_key=api_key
     )
     herramientas_navegador = conjunto_herramientas.get_tools()
-    #herramientas_navegador = asyncio.run(inicializar_agente())
     SYSTEM_PROMPT = """Eres el Asistente Oficial del IES Jándula (Andújar). 
         Tu ámbito de actuación es EXCLUSIVAMENTE el centro educativo IES Jándula.
         Respondes SIEMPRE en español mientras no te pidan que respondas en otro idioma.
@@ -74,10 +110,14 @@ async def inicializar_agente():
         except Exception as e:
             print(e)
             return {"messages": [("assistant", "Lo siento, he tenido un problema técnico buscando esa información.")]}
+    
+    # Nodo de herramientas sincrónico
+    def herramientas_nodo(estado: Estado):
+        return _ejecutar_herramientas_sincro(estado, herramientas_navegador+[guia_profesorado,dar_respuesta_final, tool_busqueda_general])
 
     constructor_grafo = StateGraph(Estado)
     constructor_grafo.add_node("chatbot",chatbot)
-    constructor_grafo.add_node("tools", ToolNode(tools=herramientas_navegador+[guia_profesorado,dar_respuesta_final, tool_busqueda_general]))
+    constructor_grafo.add_node("tools", herramientas_nodo)
     constructor_grafo.add_conditional_edges("chatbot",tools_condition)
     constructor_grafo.add_edge("tools","chatbot")
     constructor_grafo.add_edge(START,"chatbot")

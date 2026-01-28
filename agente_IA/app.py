@@ -1,31 +1,56 @@
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel
-from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from agente import agente
-
-
-
-
+from routes import router, inicializar_agente_app
 
 load_dotenv()
 
-app = FastAPI(title="Agente IES Jándula API")
+# Eventos de ciclo de vida de la aplicación
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Inicializar el agente cuando la app arranca
+    print("\n" + "="*60)
+    print("INICIANDO APLICACIÓN DEL AGENTE IES JÁNDULA")
+    print("="*60)
+    await inicializar_agente_app()
+    print("="*60 + "\n")
+    yield
+    # Shutdown: Limpiar recursos si es necesario
+    print("\nAplicación finalizada.")
 
-class Pregunta(BaseModel):
-    pregunta: str
+# Crear aplicación FastAPI
+app = FastAPI(
+    title="Agente IES Jándula API",
+    description="API para consultar al agente del IES Jándula",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
-@app.post("/consulta/")
-async def consulta_ies_jandula(data: Pregunta):
-    try:
-        print(f"Recibida pregunta: {data.pregunta}")
-        # run_in_threadpool evita el error de Playwright Sync en el loop de FastAPI
-        respuesta = await run_in_threadpool(agente.run, data.pregunta)
-        return {"respuesta": respuesta}
-    except Exception as e:
-        print(f"Error en API: {e}")
-        return {"error": str(e)}
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Incluir rutas del agente
+app.include_router(router)
+
+@app.get("/")
+async def root():
+    """Endpoint raíz de bienvenida."""
+    return {
+        "mensaje": "Bienvenido a la API del Agente IES Jándula",
+        "docs": "/docs",
+        "endpoints": {
+            "consulta": "/agente/consulta",
+            "health": "/agente/health"
+        }
+    }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)
